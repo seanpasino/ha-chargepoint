@@ -47,10 +47,6 @@ class ChargePointChargerChargeLimitSelectEntity(ChargePointChargerSelectEntity):
         self._attr_current_option = str(self.charger_status.amperage_limit)
 
     async def async_select_option(self, option: str) -> None:
-        if not self.charger_status.plugged_in:
-            self._attr_current_option = str(self.charger_status.amperage_limit)
-            raise HomeAssistantError("Cannot set amperage if charger not plugged in!")
-
         try:
             _LOGGER.warning(
                 "Setting new ChargePoint amperage on Device ID: %s to %d",
