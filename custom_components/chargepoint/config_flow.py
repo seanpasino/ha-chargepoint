@@ -1,16 +1,13 @@
 """Adds config flow for ChargePoint."""
 
 import logging
-from collections import OrderedDict
 from typing import Any, Mapping, Tuple
 
 import voluptuous as vol
 from homeassistant.config_entries import (
-    CONN_CLASS_CLOUD_POLL,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    FlowResult,
     OptionsFlow,
 )
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_PASSWORD, CONF_USERNAME
@@ -34,38 +31,28 @@ _LOGGER = logging.getLogger(__name__)
 
 def _login_schema(username: str = "") -> vol.Schema:
     return vol.Schema(
-        OrderedDict(
-            [
-                (
-                    vol.Required(CONF_USERNAME, default=username),
-                    str,
-                ),
-                (vol.Required(CONF_PASSWORD, default=""), str),
-            ]
-        )
+        {
+            vol.Required(CONF_USERNAME, default=username): str,
+            vol.Required(CONF_PASSWORD, default=""): str,
+        }
     )
 
 
 def _options_schema(poll_interval: int | str = POLL_INTERVAL_DEFAULT) -> vol.Schema:
     return vol.Schema(
-        OrderedDict(
-            [
-                (
-                    vol.Required(OPTION_POLL_INTERVAL, default=str(poll_interval)),
-                    selector(
-                        {
-                            "select": {
-                                "mode": "dropdown",
-                                "options": [
-                                    {"label": k, "value": str(v)}
-                                    for k, v in POLL_INTERVAL_OPTIONS.items()
-                                ],
-                            }
-                        }
-                    ),
-                ),
-            ]
-        )
+        {
+            vol.Required(OPTION_POLL_INTERVAL, default=str(poll_interval)): selector(
+                {
+                    "select": {
+                        "mode": "dropdown",
+                        "options": [
+                            {"label": k, "value": str(v)}
+                            for k, v in POLL_INTERVAL_OPTIONS.items()
+                        ],
+                    }
+                }
+            ),
+        }
     )
 
 
@@ -73,7 +60,6 @@ class ChargePointFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for ChargePoint."""
 
     VERSION = 1
-    CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
 
     def __init__(self):
         self._reauth_entry: ConfigEntry | None = None
@@ -89,7 +75,10 @@ class ChargePointFlowHandler(ConfigFlow, domain=DOMAIN):
             )
             return client.session_token, None
         except ChargePointLoginError as exc:
-            error_id = exc.response.json().get("errorId")
+            try:
+                error_id = exc.response.json().get("errorId")
+            except Exception:
+                error_id = None
             if error_id == 9:
                 _LOGGER.exception("Invalid credentials for ChargePoint")
                 return None, "invalid_credentials"
@@ -189,7 +178,7 @@ class OptionsFlowHandler(OptionsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             poll_interval = int(user_input[OPTION_POLL_INTERVAL])

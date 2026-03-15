@@ -3,6 +3,7 @@ Custom integration to integrate ChargePoint with Home Assistant.
 
 """
 
+import asyncio
 import logging
 import os
 from dataclasses import dataclass
@@ -94,7 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 entry,
                 data={
                     **entry.data,
-                    CONF_ACCESS_TOKEN: session_token,
+                    CONF_ACCESS_TOKEN: client.session_token,
                 },
             )
     except ChargePointLoginError as exc:
@@ -127,7 +128,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             _LOGGER.debug("User charging status: %s", crg_status)
             data[ACCT_CRG_STATUS] = crg_status
 
-            if crg_status:
+            if crg_status and crg_status.session_id:
                 crg_session: ChargingSession = await hass.async_add_executor_job(
                     client.get_charging_session, crg_status.session_id
                 )
@@ -137,16 +138,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             home_chargers: list = await hass.async_add_executor_job(
                 client.get_home_chargers
             )
-            for charger in home_chargers:
-                hcrg_status: HomeChargerStatus = await hass.async_add_executor_job(
-                    client.get_home_charger_status, charger
-                )
-                hcrg_tech_info: HomeChargerTechnicalInfo = (
-                    await hass.async_add_executor_job(
+
+            async def _fetch_charger(charger):
+                hcrg_status, hcrg_tech_info = await asyncio.gather(
+                    hass.async_add_executor_job(
+                        client.get_home_charger_status, charger
+                    ),
+                    hass.async_add_executor_job(
                         client.get_home_charger_technical_info, charger
-                    )
+                    ),
                 )
-                data[ACCT_HOME_CRGS][charger] = (hcrg_status, hcrg_tech_info)
+                return charger, (hcrg_status, hcrg_tech_info)
+
+            charger_results = await asyncio.gather(
+                *[_fetch_charger(charger) for charger in home_chargers]
+            )
+            for charger, charger_data in charger_results:
+                data[ACCT_HOME_CRGS][charger] = charger_data
 
             return data
         except ChargePointInvalidSession:
@@ -160,7 +168,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                         entry,
                         data={
                             **entry.data,
-                            CONF_ACCESS_TOKEN: session_token,
+                            CONF_ACCESS_TOKEN: client.session_token,
                         },
                     )
                     return await async_update_data(is_retry=True)

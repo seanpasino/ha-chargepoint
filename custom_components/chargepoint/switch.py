@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, List, Optional, Tuple, Type
 
 from homeassistant.components.switch import (
@@ -57,7 +57,7 @@ class ChargePointChargerChargingSessionSwitchEntity(ChargePointChargerSwitchEnti
     @property
     def is_on(self) -> bool | None:
         if self.last_toggled_on is not None and (
-            (self.last_toggled_on + timedelta(minutes=3)) > datetime.now()
+            (self.last_toggled_on + timedelta(minutes=3)) > datetime.now(timezone.utc)
         ):
             # The ChargePoint session API is eventually consistent.
             # Let's just assume we started a session for a bit.
@@ -90,7 +90,7 @@ class ChargePointChargerChargingSessionSwitchEntity(ChargePointChargerSwitchEnti
             # TODO: Maybe we should add some retry logic here just in case?
             _LOGGER.warning(EXCEPTION_WARNING_MSG)
 
-        self.last_toggled_on = datetime.now()
+        self.last_toggled_on = datetime.now(timezone.utc)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self) -> None:

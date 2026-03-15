@@ -1,13 +1,13 @@
 {
   "domain": "chargepoint",
   "name": "ChargePoint",
-  "codeowners": ["@mbillow"],
+  "codeowners": ["@seanpasino"],
   "config_flow": true,
-  "documentation": "https://github.com/mbillow/ha-chargepoint",
+  "documentation": "https://github.com/seanpasino/ha-chargepoint",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/mbillow/ha-chargepoint/issues",
+  "issue_tracker": "https://github.com/seanpasino/ha-chargepoint/issues",
   "requirements": [
-	"python-chargepoint@git+https://github.com/samclark2015/python-chargepoint.git@main"
-    ],
+    "python-chargepoint@git+https://github.com/samclark2015/python-chargepoint.git@a74b6c64ac2cc8d6054f5f98be7565d645874fe3"
+  ],
   "version": "0.11.0"
 }

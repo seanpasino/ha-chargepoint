@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional, Tuple, Type
 
 from homeassistant.components.button import (
@@ -51,8 +51,8 @@ class ChargePointChargerButtonEntity(ButtonEntity, ChargePointChargerEntity):
 
     async def async_press(self) -> None:
         """Press the button."""
-        await self.on_press()
-        self.last_toggled_on = datetime.now()
+        await self._async_press()
+        self.last_toggled_on = datetime.now(timezone.utc)
         await self.coordinator.async_request_refresh()
 
 
@@ -61,7 +61,7 @@ class ChargePointChargerRestartChargerButton(ChargePointChargerButtonEntity):
 
     async def _async_press(self) -> None:
         try:
-            self.session = await self.hass.async_add_executor_job(
+            await self.hass.async_add_executor_job(
                 self.client.restart_home_charger, self.charger_id
             )
         except ChargePointCommunicationException:
